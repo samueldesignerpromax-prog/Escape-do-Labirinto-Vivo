@@ -7,130 +7,69 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="game-container">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        
-        <!-- Interface Principal -->
-        <div class="ui-panel">
-            <div class="ui-top">
-                <div class="stat-card">
-                    <div class="stat-icon">⏱️</div>
-                    <div class="stat-info">
-                        <div class="stat-label">TEMPO</div>
-                        <div class="stat-value" id="timerValue">00:00</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🧭</div>
-                    <div class="stat-info">
-                        <div class="stat-label">DISTÂNCIA</div>
-                        <div class="stat-value" id="distanceValue">0</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">💰</div>
-                    <div class="stat-info">
-                        <div class="stat-label">MOEDAS</div>
-                        <div class="stat-value" id="coinsValue">0</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🔑</div>
-                    <div class="stat-info">
-                        <div class="stat-label">CHAVES</div>
-                        <div class="stat-value" id="keysValue">0</div>
-                    </div>
-                </div>
-                <div class="stat-card enemy-counter">
-                    <div class="stat-icon">👾</div>
-                    <div class="stat-info">
-                        <div class="stat-label">PERSEGUIDORES</div>
-                        <div class="stat-value" id="enemiesValue">0</div>
-                    </div>
-                </div>
-            </div>
-            <div class="ui-bottom">
-                <div class="stat-card">
-                    <div class="stat-icon">🔄</div>
-                    <div class="stat-info">
-                        <div class="stat-label">PRÓXIMA MUDANÇA</div>
-                        <div class="stat-value" id="nextChangeValue">5.0s</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⭐</div>
-                    <div class="stat-info">
-                        <div class="stat-label">RECORDE</div>
-                        <div class="stat-value" id="highScoreValue">0</div>
-                    </div>
-                </div>
-                <div class="powerup-status" id="powerupStatus"></div>
-            </div>
+<div class="game-container">
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    
+    <div class="ui-panel">
+        <div class="ui-top">
+            <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-info"><div class="stat-label">TEMPO</div><div class="stat-value" id="timerValue">00:00</div></div></div>
+            <div class="stat-card"><div class="stat-icon">🧭</div><div class="stat-info"><div class="stat-label">DISTÂNCIA</div><div class="stat-value" id="distanceValue">0</div></div></div>
+            <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-info"><div class="stat-label">MOEDAS</div><div class="stat-value" id="coinsValue">0</div></div></div>
+            <div class="stat-card"><div class="stat-icon">🔑</div><div class="stat-info"><div class="stat-label">CHAVES</div><div class="stat-value" id="keysValue">0</div></div></div>
+            <div class="stat-card enemy-counter"><div class="stat-icon">👾</div><div class="stat-info"><div class="stat-label">INIMIGOS</div><div class="stat-value" id="enemiesValue">0</div></div></div>
         </div>
-        
-        <!-- Barra de Vida -->
-        <div class="health-bar-container">
-            <div class="health-label">❤️ VIDA</div>
-            <div class="health-bar-bg">
-                <div class="health-bar-fill" id="healthBarFill"></div>
-            </div>
+        <div class="ui-bottom">
+            <div class="stat-card"><div class="stat-icon">🔄</div><div class="stat-info"><div class="stat-label">PRÓXIMA MUDANÇA</div><div class="stat-value" id="nextChangeValue">5.0s</div></div></div>
+            <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-info"><div class="stat-label">RECORDE</div><div class="stat-value" id="highScoreValue">0</div></div></div>
+            <div class="powerup-status" id="powerupStatus">✓ ATIVO</div>
         </div>
-        
-        <!-- Minimapa -->
-        <div class="minimap-container">
-            <canvas id="minimapCanvas" width="140" height="140"></canvas>
-        </div>
-        
-        <!-- Power-ups Disponíveis -->
-        <div class="powerups-panel" id="powerupsPanel">
-            <button class="powerup-btn" id="powerupReveal" disabled>
-                🔮 REVELAR (50)
-            </button>
-            <button class="powerup-btn" id="powerupFreeze" disabled>
-                ❄️ CONGELAR (75)
-            </button>
-            <button class="powerup-btn" id="powerupSpeed" disabled>
-                ⚡ VELOCIDADE (40)
-            </button>
-            <button class="powerup-btn" id="powerupStun" disabled>
-                💫 ATORD(OAR (60)
-            </button>
-        </div>
-        
-        <!-- Controles Mobile -->
-        <div class="mobile-controls hidden" id="mobileControls">
-            <button class="ctrl-btn" id="btnUp">▲</button>
-            <div class="ctrl-row">
-                <button class="ctrl-btn" id="btnLeft">◀</button>
-                <button class="ctrl-btn" id="btnDown">▼</button>
-                <button class="ctrl-btn" id="btnRight">▶</button>
-            </div>
-        </div>
-        
-        <!-- Telas de Estado -->
-        <div id="gameOverlay" class="game-overlay hidden">
-            <div class="overlay-card">
-                <h2 id="overlayTitle">💀 GAME OVER 💀</h2>
-                <p id="overlayMessage">Você foi capturado pelos perseguidores!</p>
-                <div class="final-stats">
-                    <p>Tempo: <span id="finalTime">0</span></p>
-                    <p>Moedas: <span id="finalCoins">0</span></p>
-                    <p>Chaves: <span id="finalKeys">0</span></p>
-                    <p>Distância: <span id="finalDistance">0</span></p>
-                    <p>Inimigos derrotados: <span id="finalDefeated">0</span></p>
-                </div>
-                <button id="restartButton" class="action-btn">🔄 JOGAR NOVAMENTE</button>
-            </div>
-        </div>
-        
-        <div class="instructions">
-            <span>WASD/←→↑↓</span> Mover • Fuja dos inimigos! • Labirinto muda a cada 5s
-        </div>
-        
-        <!-- Efeito de transição -->
-        <div id="mazeFlash" class="maze-flash hidden"></div>
     </div>
     
-    <script src="script.js"></script>
+    <div class="health-bar-container">
+        <div class="health-label">❤️ VIDA</div>
+        <div class="health-bar-bg"><div class="health-bar-fill" id="healthBarFill" style="width:100%"></div></div>
+    </div>
+    
+    <div class="minimap-container">
+        <canvas id="minimapCanvas" width="100" height="100"></canvas>
+    </div>
+    
+    <div class="powerups-panel">
+        <button class="powerup-btn" id="powerupReveal">🔮 REVELAR (50)</button>
+        <button class="powerup-btn" id="powerupFreeze">❄️ CONGELAR (75)</button>
+        <button class="powerup-btn" id="powerupSpeed">⚡ VELOCIDADE (40)</button>
+        <button class="powerup-btn" id="powerupStun">💫 ATORD(OAR (60)</button>
+    </div>
+    
+    <div class="mobile-controls" id="mobileControls">
+        <button class="ctrl-btn" id="btnUp">▲</button>
+        <div class="ctrl-row">
+            <button class="ctrl-btn" id="btnLeft">◀</button>
+            <button class="ctrl-btn" id="btnDown">▼</button>
+            <button class="ctrl-btn" id="btnRight">▶</button>
+        </div>
+    </div>
+    
+    <div id="gameOverlay" class="game-overlay hidden">
+        <div class="overlay-card">
+            <h2 id="overlayTitle">💀 GAME OVER 💀</h2>
+            <div class="final-stats">
+                <p>Tempo: <span id="finalTime">0</span></p>
+                <p>Moedas: <span id="finalCoins">0</span></p>
+                <p>Chaves: <span id="finalKeys">0</span></p>
+                <p>Distância: <span id="finalDistance">0</span></p>
+            </div>
+            <button id="restartButton" class="action-btn">🔄 JOGAR NOVAMENTE</button>
+        </div>
+    </div>
+    
+    <div class="instructions">
+        <span>WASD/←→↑↓</span> Mover • <span>X</span> Atacar • Fuja dos inimigos!
+    </div>
+    
+    <div id="mazeFlash" class="maze-flash hidden"></div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
