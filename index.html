@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Escape do Labirinto Vivo - Maze Evolution</title>
+    <title>Escape do Labirinto Vivo - Com Perseguidores!</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -41,6 +41,13 @@
                         <div class="stat-value" id="keysValue">0</div>
                     </div>
                 </div>
+                <div class="stat-card enemy-counter">
+                    <div class="stat-icon">👾</div>
+                    <div class="stat-info">
+                        <div class="stat-label">PERSEGUIDORES</div>
+                        <div class="stat-value" id="enemiesValue">0</div>
+                    </div>
+                </div>
             </div>
             <div class="ui-bottom">
                 <div class="stat-card">
@@ -61,21 +68,32 @@
             </div>
         </div>
         
+        <!-- Barra de Vida -->
+        <div class="health-bar-container">
+            <div class="health-label">❤️ VIDA</div>
+            <div class="health-bar-bg">
+                <div class="health-bar-fill" id="healthBarFill"></div>
+            </div>
+        </div>
+        
         <!-- Minimapa -->
         <div class="minimap-container">
-            <canvas id="minimapCanvas" width="120" height="120"></canvas>
+            <canvas id="minimapCanvas" width="140" height="140"></canvas>
         </div>
         
         <!-- Power-ups Disponíveis -->
         <div class="powerups-panel" id="powerupsPanel">
             <button class="powerup-btn" id="powerupReveal" disabled>
-                🔮 REVELAR MAPA
+                🔮 REVELAR (50)
             </button>
             <button class="powerup-btn" id="powerupFreeze" disabled>
-                ❄️ CONGELAR (5s)
+                ❄️ CONGELAR (75)
             </button>
             <button class="powerup-btn" id="powerupSpeed" disabled>
-                ⚡ VELOCIDADE+
+                ⚡ VELOCIDADE (40)
+            </button>
+            <button class="powerup-btn" id="powerupStun" disabled>
+                💫 ATORD(OAR (60)
             </button>
         </div>
         
@@ -92,22 +110,24 @@
         <!-- Telas de Estado -->
         <div id="gameOverlay" class="game-overlay hidden">
             <div class="overlay-card">
-                <h2 id="overlayTitle">🎉 VITÓRIA! 🎉</h2>
-                <p id="overlayMessage">Você escapou do labirinto!</p>
+                <h2 id="overlayTitle">💀 GAME OVER 💀</h2>
+                <p id="overlayMessage">Você foi capturado pelos perseguidores!</p>
                 <div class="final-stats">
                     <p>Tempo: <span id="finalTime">0</span></p>
                     <p>Moedas: <span id="finalCoins">0</span></p>
+                    <p>Chaves: <span id="finalKeys">0</span></p>
                     <p>Distância: <span id="finalDistance">0</span></p>
+                    <p>Inimigos derrotados: <span id="finalDefeated">0</span></p>
                 </div>
                 <button id="restartButton" class="action-btn">🔄 JOGAR NOVAMENTE</button>
             </div>
         </div>
         
         <div class="instructions">
-            <span>WASD/←→↑↓</span> Mover • Labirinto muda a cada 5 segundos!
+            <span>WASD/←→↑↓</span> Mover • Fuja dos inimigos! • Labirinto muda a cada 5s
         </div>
         
-        <!-- Efeito de transição do labirinto -->
+        <!-- Efeito de transição -->
         <div id="mazeFlash" class="maze-flash hidden"></div>
     </div>
     
