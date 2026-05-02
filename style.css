@@ -1,0 +1,372 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', 'Courier New', monospace;
+    padding: 20px;
+}
+
+.game-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+canvas {
+    display: block;
+    margin: 0 auto;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    background: #0a0a1a;
+    border: 2px solid #00ffcc33;
+}
+
+/* UI Panel */
+.ui-panel {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.ui-top, .ui-bottom {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.stat-card {
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid #00ffcc66;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-icon {
+    font-size: 20px;
+}
+
+.stat-info {
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 9px;
+    color: #00ffcc;
+    letter-spacing: 1px;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    font-family: monospace;
+}
+
+.powerup-status {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid #ffcc00;
+    color: #ffcc00;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Minimapa */
+.minimap-container {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 8px;
+    padding: 5px;
+    border: 1px solid #00ffcc;
+    z-index: 10;
+}
+
+#minimapCanvas {
+    width: 120px;
+    height: 120px;
+    display: block;
+}
+
+/* Power-ups Panel */
+.powerups-panel {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.powerup-btn {
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid #ffcc00;
+    color: #ffcc00;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: monospace;
+}
+
+.powerup-btn:active {
+    transform: scale(0.95);
+}
+
+.powerup-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Mobile Controls */
+.mobile-controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    padding: 12px;
+    border-radius: 50px;
+    z-index: 20;
+    border: 1px solid #00ffcc66;
+}
+
+.ctrl-btn {
+    width: 55px;
+    height: 55px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 2px solid #00ffcc;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.05s linear;
+    color: #00ffcc;
+    font-weight: bold;
+}
+
+.ctrl-btn:active {
+    transform: scale(0.95);
+    background: #00ffcc33;
+}
+
+.ctrl-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+/* Game Over Overlay */
+.game-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    z-index: 30;
+}
+
+.game-overlay.hidden {
+    display: none;
+}
+
+.overlay-card {
+    background: linear-gradient(135deg, #1a1a2e, #0f0f1a);
+    padding: 30px 40px;
+    border-radius: 20px;
+    text-align: center;
+    border: 2px solid #00ffcc;
+    animation: fadeIn 0.3s ease;
+    max-width: 90%;
+}
+
+.overlay-card h2 {
+    color: #00ffcc;
+    font-size: 28px;
+    margin-bottom: 15px;
+}
+
+.overlay-card p {
+    color: #ccc;
+    margin-bottom: 20px;
+}
+
+.final-stats {
+    margin: 20px 0;
+    text-align: left;
+    color: white;
+}
+
+.final-stats p {
+    margin: 8px 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.final-stats span {
+    color: #00ffcc;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.action-btn {
+    background: linear-gradient(135deg, #00ffcc, #0066ff);
+    color: #0a0a0a;
+    border: none;
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: monospace;
+}
+
+.action-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px #00ffcc;
+}
+
+.instructions {
+    background: rgba(0, 0, 0, 0.7);
+    color: #00ffcc;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: monospace;
+}
+
+.instructions span {
+    background: #00ffcc22;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin: 0 2px;
+}
+
+/* Efeito de mudança do labirinto */
+.maze-flash {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    pointer-events: none;
+    border-radius: 12px;
+    z-index: 15;
+}
+
+.maze-flash.hidden {
+    display: none;
+}
+
+/* Responsividade */
+@media (max-width: 850px) {
+    canvas, #gameCanvas {
+        width: 95vw;
+        height: auto;
+    }
+    
+    .stat-value {
+        font-size: 12px;
+    }
+    
+    .stat-icon {
+        font-size: 16px;
+    }
+    
+    .stat-card {
+        padding: 4px 8px;
+    }
+    
+    .powerup-btn {
+        padding: 4px 8px;
+        font-size: 8px;
+    }
+    
+    .ctrl-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .mobile-controls {
+        display: flex;
+    }
+    
+    .instructions {
+        display: none;
+    }
+    
+    .powerups-panel {
+        bottom: 80px;
+    }
+    
+    .minimap-container {
+        bottom: 80px;
+    }
+}
+
+@media (max-width: 600px) {
+    .ui-top {
+        flex-wrap: wrap;
+    }
+    
+    .powerup-status {
+        font-size: 9px;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes flash {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.3; }
+}
