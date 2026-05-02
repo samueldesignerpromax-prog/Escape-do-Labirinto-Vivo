@@ -11,16 +11,13 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-family: 'Segoe UI', 'Courier New', monospace;
+    font-family: 'Courier New', monospace;
     padding: 20px;
 }
 
 .game-container {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
+    display: inline-block;
 }
 
 canvas {
@@ -28,7 +25,6 @@ canvas {
     margin: 0 auto;
     border-radius: 12px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-    cursor: pointer;
     background: #0a0a1a;
     border: 2px solid #00ffcc33;
 }
@@ -56,12 +52,12 @@ canvas {
 .stat-card {
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(8px);
-    padding: 6px 12px;
-    border-radius: 12px;
+    padding: 4px 10px;
+    border-radius: 10px;
     border: 1px solid #00ffcc66;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .enemy-counter {
@@ -69,7 +65,7 @@ canvas {
 }
 
 .stat-icon {
-    font-size: 20px;
+    font-size: 18px;
 }
 
 .stat-info {
@@ -77,7 +73,7 @@ canvas {
 }
 
 .stat-label {
-    font-size: 9px;
+    font-size: 8px;
     color: #00ffcc;
     letter-spacing: 1px;
 }
@@ -87,7 +83,7 @@ canvas {
 }
 
 .stat-value {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
     color: white;
     font-family: monospace;
@@ -95,11 +91,11 @@ canvas {
 
 .powerup-status {
     background: rgba(0, 0, 0, 0.85);
-    padding: 6px 12px;
-    border-radius: 12px;
+    padding: 4px 10px;
+    border-radius: 10px;
     border: 1px solid #ffcc00;
     color: #ffcc00;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
     pointer-events: none;
 }
@@ -111,24 +107,24 @@ canvas {
     right: 10px;
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(8px);
-    padding: 6px 12px;
-    border-radius: 12px;
+    padding: 5px 10px;
+    border-radius: 10px;
     border: 1px solid #ff3366;
     z-index: 10;
-    min-width: 120px;
+    min-width: 100px;
 }
 
 .health-label {
-    font-size: 9px;
+    font-size: 8px;
     color: #ff3366;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
 .health-bar-bg {
     width: 100%;
-    height: 8px;
+    height: 6px;
     background: #333;
-    border-radius: 4px;
+    border-radius: 3px;
     overflow: hidden;
 }
 
@@ -137,7 +133,6 @@ canvas {
     width: 100%;
     background: linear-gradient(90deg, #ff3366, #ff6699);
     transition: width 0.2s ease;
-    border-radius: 4px;
 }
 
 /* Minimapa */
@@ -147,14 +142,14 @@ canvas {
     right: 10px;
     background: rgba(0, 0, 0, 0.85);
     border-radius: 8px;
-    padding: 5px;
+    padding: 4px;
     border: 1px solid #00ffcc;
     z-index: 10;
 }
 
 #minimapCanvas {
-    width: 140px;
-    height: 140px;
+    width: 100px;
+    height: 100px;
     display: block;
 }
 
@@ -164,10 +159,10 @@ canvas {
     bottom: 10px;
     left: 10px;
     display: flex;
-    gap: 8px;
+    gap: 6px;
     z-index: 10;
     flex-wrap: wrap;
-    max-width: 300px;
+    max-width: 280px;
 }
 
 .powerup-btn {
@@ -175,9 +170,9 @@ canvas {
     backdrop-filter: blur(8px);
     border: 1px solid #ffcc00;
     color: #ffcc00;
-    padding: 6px 10px;
-    border-radius: 20px;
-    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 15px;
+    font-size: 9px;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s;
@@ -199,26 +194,25 @@ canvas {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 8px;
     background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(10px);
-    padding: 12px;
-    border-radius: 50px;
+    padding: 10px;
+    border-radius: 40px;
     z-index: 20;
     border: 1px solid #00ffcc66;
 }
 
 .ctrl-btn {
-    width: 55px;
-    height: 55px;
-    border-radius: 30px;
+    width: 50px;
+    height: 50px;
+    border-radius: 25px;
     background: linear-gradient(135deg, #1a1a2e, #16213e);
     border: 2px solid #00ffcc;
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
-    transition: all 0.05s linear;
     color: #00ffcc;
     font-weight: bold;
 }
@@ -256,79 +250,70 @@ canvas {
 
 .overlay-card {
     background: linear-gradient(135deg, #1a1a2e, #0f0f1a);
-    padding: 30px 40px;
+    padding: 20px 30px;
     border-radius: 20px;
     text-align: center;
     border: 2px solid #00ffcc;
-    animation: fadeIn 0.3s ease;
     max-width: 90%;
 }
 
 .overlay-card h2 {
     color: #00ffcc;
-    font-size: 28px;
-    margin-bottom: 15px;
-}
-
-.overlay-card p {
-    color: #ccc;
-    margin-bottom: 20px;
+    font-size: 24px;
+    margin-bottom: 10px;
 }
 
 .final-stats {
-    margin: 20px 0;
+    margin: 15px 0;
     text-align: left;
     color: white;
+    font-size: 12px;
 }
 
 .final-stats p {
-    margin: 8px 0;
+    margin: 5px 0;
     display: flex;
     justify-content: space-between;
-    gap: 20px;
+    gap: 15px;
 }
 
 .final-stats span {
     color: #00ffcc;
     font-weight: bold;
-    font-size: 20px;
 }
 
 .action-btn {
     background: linear-gradient(135deg, #00ffcc, #0066ff);
     color: #0a0a0a;
     border: none;
-    padding: 12px 30px;
-    font-size: 16px;
+    padding: 10px 25px;
+    font-size: 14px;
     font-weight: bold;
-    border-radius: 30px;
+    border-radius: 25px;
     cursor: pointer;
-    transition: all 0.2s;
     font-family: monospace;
-}
-
-.action-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 15px #00ffcc;
 }
 
 .instructions {
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    right: 0;
+    text-align: center;
     background: rgba(0, 0, 0, 0.7);
     color: #00ffcc;
-    padding: 6px 15px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-family: monospace;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 10px;
+    margin-top: 10px;
 }
 
 .instructions span {
     background: #00ffcc22;
-    padding: 2px 8px;
-    border-radius: 12px;
-    margin: 0 2px;
+    padding: 2px 6px;
+    border-radius: 10px;
 }
 
-/* Efeitos */
 .maze-flash {
     position: absolute;
     top: 0;
@@ -345,80 +330,11 @@ canvas {
     display: none;
 }
 
-/* Responsividade */
-@media (max-width: 850px) {
-    canvas, #gameCanvas {
-        width: 95vw;
-        height: auto;
-    }
-    
-    .stat-value {
-        font-size: 12px;
-    }
-    
-    .stat-icon {
-        font-size: 14px;
-    }
-    
-    .stat-card {
-        padding: 4px 8px;
-    }
-    
-    .powerup-btn {
-        padding: 4px 8px;
-        font-size: 8px;
-    }
-    
-    .ctrl-btn {
-        width: 45px;
-        height: 45px;
-        font-size: 20px;
-    }
-    
-    .health-bar-container {
-        top: auto;
-        bottom: 10px;
-        left: 10px;
-        right: auto;
-    }
-}
-
 @media (max-width: 768px) {
-    .mobile-controls {
-        display: flex;
-    }
-    
-    .instructions {
-        display: none;
-    }
-    
-    .powerups-panel {
-        bottom: 80px;
-        left: 10px;
-    }
-    
-    .minimap-container {
-        bottom: 80px;
-    }
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes enemyPulse {
-    0%, 100% { filter: drop-shadow(0 0 2px #ff3366); }
-    50% { filter: drop-shadow(0 0 10px #ff3366); }
-}
-
-@keyframes hitFlash {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; background: #ff0000; }
+    .mobile-controls { display: flex; }
+    .instructions { display: none; }
+    .powerups-panel { bottom: 80px; }
+    .minimap-container { bottom: 80px; }
+    .stat-value { font-size: 11px; }
+    .stat-icon { font-size: 14px; }
 }
