@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Escape do Labirinto Vivo - Maze Evolution</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <!-- Interface Principal -->
+        <div class="ui-panel">
+            <div class="ui-top">
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-info">
+                        <div class="stat-label">TEMPO</div>
+                        <div class="stat-value" id="timerValue">00:00</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🧭</div>
+                    <div class="stat-info">
+                        <div class="stat-label">DISTÂNCIA</div>
+                        <div class="stat-value" id="distanceValue">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-info">
+                        <div class="stat-label">MOEDAS</div>
+                        <div class="stat-value" id="coinsValue">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔑</div>
+                    <div class="stat-info">
+                        <div class="stat-label">CHAVES</div>
+                        <div class="stat-value" id="keysValue">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui-bottom">
+                <div class="stat-card">
+                    <div class="stat-icon">🔄</div>
+                    <div class="stat-info">
+                        <div class="stat-label">PRÓXIMA MUDANÇA</div>
+                        <div class="stat-value" id="nextChangeValue">5.0s</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-info">
+                        <div class="stat-label">RECORDE</div>
+                        <div class="stat-value" id="highScoreValue">0</div>
+                    </div>
+                </div>
+                <div class="powerup-status" id="powerupStatus"></div>
+            </div>
+        </div>
+        
+        <!-- Minimapa -->
+        <div class="minimap-container">
+            <canvas id="minimapCanvas" width="120" height="120"></canvas>
+        </div>
+        
+        <!-- Power-ups Disponíveis -->
+        <div class="powerups-panel" id="powerupsPanel">
+            <button class="powerup-btn" id="powerupReveal" disabled>
+                🔮 REVELAR MAPA
+            </button>
+            <button class="powerup-btn" id="powerupFreeze" disabled>
+                ❄️ CONGELAR (5s)
+            </button>
+            <button class="powerup-btn" id="powerupSpeed" disabled>
+                ⚡ VELOCIDADE+
+            </button>
+        </div>
+        
+        <!-- Controles Mobile -->
+        <div class="mobile-controls hidden" id="mobileControls">
+            <button class="ctrl-btn" id="btnUp">▲</button>
+            <div class="ctrl-row">
+                <button class="ctrl-btn" id="btnLeft">◀</button>
+                <button class="ctrl-btn" id="btnDown">▼</button>
+                <button class="ctrl-btn" id="btnRight">▶</button>
+            </div>
+        </div>
+        
+        <!-- Telas de Estado -->
+        <div id="gameOverlay" class="game-overlay hidden">
+            <div class="overlay-card">
+                <h2 id="overlayTitle">🎉 VITÓRIA! 🎉</h2>
+                <p id="overlayMessage">Você escapou do labirinto!</p>
+                <div class="final-stats">
+                    <p>Tempo: <span id="finalTime">0</span></p>
+                    <p>Moedas: <span id="finalCoins">0</span></p>
+                    <p>Distância: <span id="finalDistance">0</span></p>
+                </div>
+                <button id="restartButton" class="action-btn">🔄 JOGAR NOVAMENTE</button>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <span>WASD/←→↑↓</span> Mover • Labirinto muda a cada 5 segundos!
+        </div>
+        
+        <!-- Efeito de transição do labirinto -->
+        <div id="mazeFlash" class="maze-flash hidden"></div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
