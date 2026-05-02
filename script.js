@@ -1,22 +1,17 @@
 /**
- * Escape do Labirinto Vivo - Com Inimigos Perseguidores!
+ * Escape do Labirinto Vivo - Com Perseguidores!
  * 
- * Mecânicas:
- * - Labirinto procedural que muda a cada 5 segundos
- * - Inimigos que perseguem o jogador
- * - Sistema de vida (3 hits = game over)
- * - Power-ups para ajudar na fuga
- * - Otimizado para não travar
+ * Controles: WASD ou Setas para mover
+ * Tecla X para atacar inimigos adjacentes
+ * O labirinto muda a cada 5 segundos!
  */
 
 // ==================== CONFIGURAÇÕES ====================
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const MAZE_SIZE = 21;
-const CELL_SIZE = Math.min(28, Math.floor(canvas.width / MAZE_SIZE));
-canvas.width = MAZE_SIZE * CELL_SIZE;
-canvas.height = MAZE_SIZE * CELL_SIZE;
+const MAZE_SIZE = 19; // Tamanho ímpar (19x19)
+const CELL_SIZE = Math.floor(canvas.width / MAZE_SIZE);
 
 // ==================== ESTADO DO JOGO ====================
 let gameRunning = true;
@@ -27,43 +22,45 @@ let keys = 0;
 let distance = 0;
 let timeSurvived = 0;
 let highScore = localStorage.getItem('mazeHighScore') || 0;
-let enemiesDefeated = 0;
 
-// Sistema de vida
 let health = 3;
 let invincibleTimer = 0;
 
-// Sistema de tempo
 let timeUntilChange = 5.0;
 let changeInterval = 5.0;
 let freezeTimer = 0;
 let speedTimer = 0;
 let revealTimer = 0;
-let stunTimer = 0;
 
-// Velocidade
-let playerSpeed = 3;
-let baseSpeed = 3;
-
-// Estrutura do labirinto
+// Estruturas do jogo
 let maze = [];
 let player = { x: 1, y: 1 };
 let exit = { x: MAZE_SIZE - 2, y: MAZE_SIZE - 2 };
 let items = [];
-let traps = [];
+let enemies = [];
 
-// ==================== CLASSE DO INIMIGO PERSEGUIDOR ====================
+// Movimento com cooldown (evita movimento muito rápido)
+let moveCooldown = 0;
+
+// Elementos DOM
+const timerValueEl = document.getElementById('timerValue');
+const distanceValueEl = document.getElementById('distanceValue');
+const coinsValueEl = document.getElementById('coinsValue');
+const keysValueEl = document.getElementById('keysValue');
+const enemiesValueEl = document.getElementById('enemiesValue');
+const nextChangeValueEl = document.getElementById('nextChangeValue');
+const highScoreValueEl = document.getElementById('highScoreValue');
+const powerupStatusEl = document.getElementById('powerupStatus');
+const healthBarFill = document.getElementById('healthBarFill');
+
+// ==================== CLASSE DO INIMIGO ====================
 class Enemy {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 1;
-        this.height = 1;
-        this.speed = 2.5;
         this.stunned = false;
         this.stunTimer = 0;
-        this.lastMoveTime = 0;
-        this.color = '#ff3366';
+        this.moveCooldown = 0;
     }
     
     update(deltaTime, player, maze) {
@@ -77,57 +74,28 @@ class Enemy {
         
         if (freezeTimer > 0) return;
         
-        // A-star simplificado para perseguição (BFS a cada poucos frames)
-        const now = Date.now();
-        if (now - this.lastMoveTime > 150) {
-            this.lastMoveTime = now;
-            const path = this.findPathToPlayer(player, maze);
-            if (path && path.length > 1) {
-                const next = path[1];
-                const dx = Math.sign(next.x - this.x);
-                const dy = Math.sign(next.y - this.y);
-                
-                const newX = this.x + dx;
-                const newY = this.y + dy;
-                
-                if (maze[newX] && maze[newX][newY] === 0) {
-                    this.x = newX;
-                    this.y = newY;
-                }
-            }
-        }
-    }
-    
-    findPathToPlayer(player, maze) {
-        const queue = [{ x: this.x, y: this.y, path: [{ x: this.x, y: this.y }] }];
-        const visited = Array(MAZE_SIZE).fill().map(() => Array(MAZE_SIZE).fill(false));
-        visited[this.x][this.y] = true;
-        
-        const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-        
-        while (queue.length > 0) {
-            const current = queue.shift();
+        this.moveCooldown -= deltaTime;
+        if (this.moveCooldown <= 0) {
+            this.moveCooldown = 0.25;
             
-            if (current.x === player.x && current.y === player.y) {
-                return current.path;
+            // Movimento inteligente em direção ao jogador
+            let dx = 0, dy = 0;
+            if (Math.abs(player.x - this.x) > Math.abs(player.y - this.y)) {
+                dx = Math.sign(player.x - this.x);
+                dy = 0;
+            } else {
+                dx = 0;
+                dy = Math.sign(player.y - this.y);
             }
             
-            for (const [dx, dy] of directions) {
-                const nx = current.x + dx;
-                const ny = current.y + dy;
-                
-                if (nx >= 0 && nx < MAZE_SIZE && ny >= 0 && ny < MAZE_SIZE &&
-                    !visited[nx][ny] && maze[nx][ny] === 0) {
-                    visited[nx][ny] = true;
-                    queue.push({
-                        x: nx,
-                        y: ny,
-                        path: [...current.path, { x: nx, y: ny }]
-                    });
-                }
+            const newX = this.x + dx;
+            const newY = this.y + dy;
+            
+            if (newX >= 0 && newX < MAZE_SIZE && newY >= 0 && newY < MAZE_SIZE && maze[newX][newY] === 0) {
+                this.x = newX;
+                this.y = newY;
             }
         }
-        return null;
     }
     
     stun() {
@@ -139,83 +107,48 @@ class Enemy {
         const x = this.y * CELL_SIZE;
         const y = this.x * CELL_SIZE;
         
-        ctx.save();
-        
-        if (this.stunned) {
-            ctx.fillStyle = '#8888ff';
-            ctx.shadowBlur = 5;
-            ctx.shadowColor = '#8888ff';
-        } else if (freezeTimer > 0) {
-            ctx.fillStyle = '#66ccff';
-            ctx.shadowBlur = 3;
-            ctx.shadowColor = '#66ccff';
-        } else {
-            ctx.fillStyle = this.color;
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = '#ff3366';
-            ctx.animation = 'enemyPulse 0.5s infinite';
-        }
-        
-        // Corpo do inimigo
+        ctx.fillStyle = this.stunned ? '#8888ff' : (freezeTimer > 0 ? '#66ccff' : '#ff3366');
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = '#ff3366';
         ctx.beginPath();
-        ctx.ellipse(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE * 0.35, CELL_SIZE * 0.35, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE * 0.3, CELL_SIZE * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Olhos (olhando para o jogador)
         ctx.fillStyle = 'white';
         ctx.beginPath();
-        ctx.arc(x + CELL_SIZE * 0.35, y + CELL_SIZE * 0.35, 5, 0, Math.PI * 2);
+        ctx.arc(x + CELL_SIZE * 0.35, y + CELL_SIZE * 0.35, 3, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.35, 5, 0, Math.PI * 2);
+        ctx.arc(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.35, 3, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.fillStyle = '#1a1a2e';
         ctx.beginPath();
-        ctx.arc(x + CELL_SIZE * 0.35, y + CELL_SIZE * 0.33, 2.5, 0, Math.PI * 2);
+        ctx.arc(x + CELL_SIZE * 0.35, y + CELL_SIZE * 0.33, 1.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.33, 2.5, 0, Math.PI * 2);
+        ctx.arc(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.33, 1.5, 0, Math.PI * 2);
         ctx.fill();
         
-        // Sobrancelhas (expressão de raiva)
-        ctx.beginPath();
-        ctx.moveTo(x + CELL_SIZE * 0.25, y + CELL_SIZE * 0.22);
-        ctx.lineTo(x + CELL_SIZE * 0.45, y + CELL_SIZE * 0.25);
-        ctx.lineTo(x + CELL_SIZE * 0.4, y + CELL_SIZE * 0.2);
-        ctx.fill();
-        
-        ctx.beginPath();
-        ctx.moveTo(x + CELL_SIZE * 0.75, y + CELL_SIZE * 0.22);
-        ctx.lineTo(x + CELL_SIZE * 0.55, y + CELL_SIZE * 0.25);
-        ctx.lineTo(x + CELL_SIZE * 0.6, y + CELL_SIZE * 0.2);
-        ctx.fill();
-        
-        ctx.restore();
+        ctx.shadowBlur = 0;
     }
 }
-
-let enemies = [];
 
 // ==================== GERADOR DE LABIRINTO ====================
 function generateMaze() {
     const newMaze = Array(MAZE_SIZE).fill().map(() => Array(MAZE_SIZE).fill(1));
     
-    function isValid(x, y) {
-        return x > 0 && x < MAZE_SIZE - 1 && y > 0 && y < MAZE_SIZE - 1;
-    }
-    
     function carve(x, y) {
-        const directions = [[0, -2], [0, 2], [-2, 0], [2, 0]];
-        for (let i = directions.length - 1; i > 0; i--) {
+        const dirs = [[0, -2], [0, 2], [-2, 0], [2, 0]];
+        for (let i = dirs.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [directions[i], directions[j]] = [directions[j], directions[i]];
+            [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
         }
         
-        for (const [dx, dy] of directions) {
+        for (const [dx, dy] of dirs) {
             const nx = x + dx;
             const ny = y + dy;
-            if (isValid(nx, ny) && newMaze[nx][ny] === 1) {
+            if (nx > 0 && nx < MAZE_SIZE - 1 && ny > 0 && ny < MAZE_SIZE - 1 && newMaze[nx][ny] === 1) {
                 newMaze[nx][ny] = 0;
                 newMaze[x + dx/2][y + dy/2] = 0;
                 carve(nx, ny);
@@ -230,66 +163,62 @@ function generateMaze() {
     return newMaze;
 }
 
-// ==================== INIMIGOS ====================
+// ==================== GERAR ITENS ====================
+function generateItems() {
+    items = [];
+    const numCoins = 8 + Math.floor(Math.random() * 5);
+    
+    for (let i = 0; i < numCoins; i++) {
+        let x, y, attempts = 0;
+        do {
+            x = 1 + Math.floor(Math.random() * (MAZE_SIZE - 2));
+            y = 1 + Math.floor(Math.random() * (MAZE_SIZE - 2));
+            attempts++;
+            if (attempts > 100) break;
+        } while (maze[x][y] !== 0 || (x === player.x && y === player.y) || 
+                (x === exit.x && y === exit.y) || items.some(item => item.x === x && item.y === y));
+        
+        if (attempts <= 100) items.push({ x, y, type: 'coin' });
+    }
+    
+    const numKeys = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < numKeys; i++) {
+        let x, y, attempts = 0;
+        do {
+            x = 1 + Math.floor(Math.random() * (MAZE_SIZE - 2));
+            y = 1 + Math.floor(Math.random() * (MAZE_SIZE - 2));
+            attempts++;
+            if (attempts > 100) break;
+        } while (maze[x][y] !== 0 || (x === player.x && y === player.y) ||
+                (x === exit.x && y === exit.y) || items.some(item => item.x === x && item.y === y));
+        
+        if (attempts <= 100) items.push({ x, y, type: 'key' });
+    }
+}
+
+// ==================== GERAR INIMIGOS ====================
 function spawnEnemies() {
     enemies = [];
     const numEnemies = Math.min(3 + Math.floor(timeSurvived / 30), 6);
     
     for (let i = 0; i < numEnemies; i++) {
-        let x, y;
-        let attempts = 0;
+        let x, y, attempts = 0;
         do {
-            x = Math.floor(Math.random() * MAZE_SIZE);
-            y = Math.floor(Math.random() * MAZE_SIZE);
+            x = 1 + Math.floor(Math.random() * (MAZE_SIZE - 2));
+            y = 1 + Math.floor(Math.random() * (MAZE_SIZE - 2));
             attempts++;
             if (attempts > 100) break;
-        } while (maze[x][y] !== 0 || 
-                (x === player.x && y === player.y) || 
-                (x === exit.x && y === exit.y) ||
-                Math.abs(x - player.x) < 5);
+        } while (maze[x][y] !== 0 || (x === player.x && y === player.y) || 
+                (x === exit.x && y === exit.y) || Math.abs(x - player.x) < 3);
         
         if (attempts <= 100) {
             enemies.push(new Enemy(x, y));
         }
     }
-    
-    document.getElementById('enemiesValue').textContent = enemies.length;
+    enemiesValueEl.textContent = enemies.length;
 }
 
-// ==================== GERAR ITENS ====================
-function generateItems() {
-    items = [];
-    const numCoins = Math.floor(Math.random() * 10) + 8;
-    const numKeys = Math.floor(Math.random() * 3) + 1;
-    
-    for (let i = 0; i < numCoins; i++) {
-        let x, y, attempts = 0;
-        do {
-            x = Math.floor(Math.random() * MAZE_SIZE);
-            y = Math.floor(Math.random() * MAZE_SIZE);
-            attempts++;
-            if (attempts > 50) break;
-        } while (maze[x][y] !== 0 || (x === player.x && y === player.y) || 
-                (x === exit.x && y === exit.y) || items.some(item => item.x === x && item.y === y));
-        
-        if (attempts <= 50) items.push({ x, y, type: 'coin' });
-    }
-    
-    for (let i = 0; i < numKeys; i++) {
-        let x, y, attempts = 0;
-        do {
-            x = Math.floor(Math.random() * MAZE_SIZE);
-            y = Math.floor(Math.random() * MAZE_SIZE);
-            attempts++;
-            if (attempts > 50) break;
-        } while (maze[x][y] !== 0 || (x === player.x && y === player.y) ||
-                (x === exit.x && y === exit.y) || items.some(item => item.x === x && item.y === y));
-        
-        if (attempts <= 50) items.push({ x, y, type: 'key' });
-    }
-}
-
-// ==================== MUTAÇÃO CONTROLADA ====================
+// ==================== MUTAÇÃO DO LABIRINTO ====================
 function mutateMaze() {
     if (freezeTimer > 0) return;
     
@@ -303,8 +232,8 @@ function mutateMaze() {
     const numMutations = Math.floor(Math.random() * 8) + 3;
     
     for (let i = 0; i < numMutations; i++) {
-        const x = Math.floor(Math.random() * MAZE_SIZE);
-        const y = Math.floor(Math.random() * MAZE_SIZE);
+        const x = 1 + Math.floor(Math.random() * (MAZE_SIZE - 2));
+        const y = 1 + Math.floor(Math.random() * (MAZE_SIZE - 2));
         
         if ((x === oldPlayerPos.x && y === oldPlayerPos.y) || 
             (x === oldExitPos.x && y === oldExitPos.y)) {
@@ -313,46 +242,18 @@ function mutateMaze() {
         
         if (maze[x][y] === 1) {
             maze[x][y] = 0;
-        } else if (maze[x][y] === 0) {
+        } else if (maze[x][y] === 0 && Math.random() > 0.3) {
             maze[x][y] = 1;
-            const testMaze = maze.map(row => [...row]);
-            testMaze[x][y] = 1;
-            if (!hasPath(testMaze, oldPlayerPos, oldExitPos)) {
-                maze[x][y] = 0;
-            }
         }
     }
     
     generateItems();
-    updateUI();
 }
 
-function hasPath(maze, start, target) {
-    const queue = [start];
-    const visited = Array(MAZE_SIZE).fill().map(() => Array(MAZE_SIZE).fill(false));
-    visited[start.x][start.y] = true;
-    const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-    
-    while (queue.length > 0) {
-        const { x, y } = queue.shift();
-        if (x === target.x && y === target.y) return true;
-        
-        for (const [dx, dy] of directions) {
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx >= 0 && nx < MAZE_SIZE && ny >= 0 && ny < MAZE_SIZE &&
-                !visited[nx][ny] && maze[nx][ny] !== 1) {
-                visited[nx][ny] = true;
-                queue.push({ x: nx, y: ny });
-            }
-        }
-    }
-    return false;
-}
-
-// ==================== MOVIMENTO ====================
+// ==================== MOVIMENTO DO JOGADOR ====================
 function movePlayer(dx, dy) {
     if (!gameRunning || gameWin) return false;
+    if (moveCooldown > 0) return false;
     
     const newX = player.x + dx;
     const newY = player.y + dy;
@@ -360,23 +261,24 @@ function movePlayer(dx, dy) {
     if (newX < 0 || newX >= MAZE_SIZE || newY < 0 || newY >= MAZE_SIZE) return false;
     if (maze[newX][newY] === 1) return false;
     
+    // Movimento confirmado
+    moveCooldown = 0.1; // Pequeno cooldown para controle
     player.x = newX;
     player.y = newY;
     distance++;
     
-    // Verificar itens
+    // Coletar itens
     const itemIndex = items.findIndex(item => item.x === player.x && item.y === player.y);
     if (itemIndex !== -1) {
         const item = items[itemIndex];
         if (item.type === 'coin') {
             coins++;
-            playCoinSound();
+            playSound(880, 0.08);
         } else if (item.type === 'key') {
             keys++;
-            playKeySound();
+            playSound(659, 0.1);
         }
         items.splice(itemIndex, 1);
-        score = Math.floor(timeSurvived * 10) + coins * 5 + keys * 20;
         updateUI();
     }
     
@@ -387,180 +289,171 @@ function movePlayer(dx, dy) {
         victory();
     }
     
-    // Velocidade power-up
-    playerSpeed = (speedTimer > 0) ? baseSpeed * 1.5 : baseSpeed;
-    
     updateUI();
     return true;
 }
 
+// ==================== ATAQUE ====================
+function attackEnemies() {
+    if (!gameRunning || gameWin) return;
+    
+    for (let enemy of enemies) {
+        const isAdjacent = (Math.abs(enemy.x - player.x) + Math.abs(enemy.y - player.y)) === 1;
+        if (isAdjacent && !enemy.stunned) {
+            enemy.stun();
+            playSound(440, 0.1);
+            break;
+        }
+    }
+}
+
 // ==================== COLISÃO COM INIMIGOS ====================
 function checkEnemyCollision() {
-    if (invincibleTimer > 0) return;
+    if (invincibleTimer > 0) {
+        invincibleTimer -= 0.016;
+        return;
+    }
     
-    for (const enemy of enemies) {
+    for (let enemy of enemies) {
         if (enemy.x === player.x && enemy.y === player.y && !enemy.stunned) {
             health--;
             invincibleTimer = 1.0;
-            updateUI();
             
-            const healthFill = document.getElementById('healthBarFill');
-            healthFill.style.width = `${(health / 3) * 100}%`;
-            
-            playHitSound();
+            const healthPercent = (health / 3) * 100;
+            healthBarFill.style.width = `${healthPercent}%`;
+            playSound(220, 0.15);
             
             if (health <= 0) {
                 gameRunning = false;
                 gameOver();
             }
-            
-            // Efeito visual de dano
-            canvas.style.animation = 'hitFlash 0.2s';
-            setTimeout(() => { canvas.style.animation = ''; }, 200);
             break;
         }
-    }
-    
-    if (invincibleTimer > 0) {
-        invincibleTimer -= 0.016;
     }
 }
 
-// ==================== ATACAR INIMIGOS ====================
-function attackEnemies() {
-    if (!gameRunning || gameWin) return;
-    
-    let hit = false;
-    for (let i = 0; i < enemies.length; i++) {
-        const enemy = enemies[i];
-        // Verificar se inimigo está adjacente
-        const isAdjacent = (Math.abs(enemy.x - player.x) + Math.abs(enemy.y - player.y)) === 1;
-        
-        if (isAdjacent && !enemy.stunned) {
-            enemy.stun();
-            enemiesDefeated++;
-            hit = true;
-            playAttackSound();
-            break;
-        }
-    }
-    
-    if (hit) {
-        updateUI();
-    }
+// ==================== SONS ====================
+let audioContext = null;
+
+function playSound(frequency, volume) {
+    if (!audioContext) return;
+    try {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = frequency;
+        gain.gain.value = volume;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.15);
+        osc.stop(audioContext.currentTime + 0.15);
+    } catch(e) {}
 }
 
 // ==================== POWER-UPS ====================
 function useRevealMap() {
-    if (revealTimer > 0) return;
-    if (score >= 50) {
-        score -= 50;
-        revealTimer = 3;
-        updateUI();
-        playPowerUpSound();
-    }
+    if (revealTimer > 0 || score < 50) return;
+    score -= 50;
+    revealTimer = 3;
+    playSound(1046, 0.1);
+    updateUI();
 }
 
 function useFreezeMaze() {
-    if (freezeTimer > 0) return;
-    if (score >= 75) {
-        score -= 75;
-        freezeTimer = 5;
-        updateUI();
-        playPowerUpSound();
-    }
+    if (freezeTimer > 0 || score < 75) return;
+    score -= 75;
+    freezeTimer = 5;
+    playSound(1046, 0.1);
+    updateUI();
 }
 
 function useSpeedBoost() {
-    if (speedTimer > 0) return;
-    if (score >= 40) {
-        score -= 40;
-        speedTimer = 4;
-        updateUI();
-        playPowerUpSound();
-    }
+    if (speedTimer > 0 || score < 40) return;
+    score -= 40;
+    speedTimer = 4;
+    playSound(1046, 0.1);
+    updateUI();
 }
 
 function useStunEnemies() {
-    if (stunTimer > 0) return;
-    if (score >= 60) {
-        score -= 60;
-        for (const enemy of enemies) {
-            enemy.stun();
-        }
-        stunTimer = 3;
-        updateUI();
-        playPowerUpSound();
+    if (score < 60) return;
+    score -= 60;
+    for (let enemy of enemies) {
+        enemy.stun();
     }
+    playSound(1046, 0.1);
+    updateUI();
+}
+
+// ==================== UI ====================
+function updateUI() {
+    coinsValueEl.textContent = coins;
+    keysValueEl.textContent = keys;
+    distanceValueEl.textContent = Math.floor(distance);
+    enemiesValueEl.textContent = enemies.length;
+    highScoreValueEl.textContent = highScore;
+    
+    let status = '';
+    if (freezeTimer > 0) status += `❄️ ${freezeTimer.toFixed(1)}s `;
+    if (speedTimer > 0) status += `⚡ ${speedTimer.toFixed(1)}s `;
+    if (revealTimer > 0) status += `🔮 ${revealTimer.toFixed(1)}s `;
+    powerupStatusEl.textContent = status || '✓ ATIVO';
+    
+    document.getElementById('powerupReveal').disabled = score < 50 || revealTimer > 0;
+    document.getElementById('powerupFreeze').disabled = score < 75 || freezeTimer > 0;
+    document.getElementById('powerupSpeed').disabled = score < 40 || speedTimer > 0;
+    document.getElementById('powerupStun').disabled = score < 60;
+}
+
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
 // ==================== TIMERS ====================
+let lastFrameTime = 0;
+
 function updateTimers(deltaTime) {
     if (!gameRunning || gameWin) return;
     
     timeSurvived += deltaTime;
     score = Math.floor(timeSurvived * 10) + coins * 5 + keys * 20;
     
+    // Cooldown do movimento
+    if (moveCooldown > 0) {
+        moveCooldown -= deltaTime;
+    }
+    
     if (freezeTimer > 0) {
         freezeTimer -= deltaTime;
-        document.getElementById('powerupStatus').innerHTML = `❄️ CONGELADO: ${freezeTimer.toFixed(1)}s`;
-        document.getElementById('nextChangeValue').textContent = 'CONGELADO';
+        nextChangeValueEl.textContent = 'CONGELADO';
     } else {
         timeUntilChange -= deltaTime;
-        document.getElementById('powerupStatus').innerHTML = '';
-        
         if (timeUntilChange <= 0) {
             mutateMaze();
             timeUntilChange = changeInterval;
         }
-        document.getElementById('nextChangeValue').textContent = `${timeUntilChange.toFixed(1)}s`;
+        nextChangeValueEl.textContent = `${timeUntilChange.toFixed(1)}s`;
     }
     
     if (speedTimer > 0) {
         speedTimer -= deltaTime;
-        document.getElementById('powerupStatus').innerHTML += ` ⚡ VELOCIDADE: ${speedTimer.toFixed(1)}s`;
     }
     
     if (revealTimer > 0) {
         revealTimer -= deltaTime;
     }
     
-    if (stunTimer > 0) {
-        stunTimer -= deltaTime;
+    timerValueEl.textContent = formatTime(timeSurvived);
+    
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('mazeHighScore', highScore);
+        highScoreValueEl.textContent = highScore;
     }
     
-    document.getElementById('timerValue').textContent = formatTime(timeSurvived);
-    document.getElementById('distanceValue').textContent = Math.floor(distance);
-    document.getElementById('coinsValue').textContent = coins;
-    document.getElementById('keysValue').textContent = keys;
-    document.getElementById('score').textContent = Math.floor(score);
-    document.getElementById('highScoreValue').textContent = highScore;
-    document.getElementById('enemiesValue').textContent = enemies.length;
-    
-    // Atualizar botões
-    const revealBtn = document.getElementById('powerupReveal');
-    const freezeBtn = document.getElementById('powerupFreeze');
-    const speedBtn = document.getElementById('powerupSpeed');
-    const stunBtn = document.getElementById('powerupStun');
-    
-    revealBtn.disabled = score < 50 || revealTimer > 0;
-    freezeBtn.disabled = score < 75 || freezeTimer > 0;
-    speedBtn.disabled = score < 40 || speedTimer > 0;
-    stunBtn.disabled = score < 60;
-}
-
-// ==================== ATUALIZAR INIMIGOS ====================
-let lastEnemyUpdate = 0;
-
-function updateEnemies(deltaTime) {
-    for (const enemy of enemies) {
-        enemy.update(deltaTime, player, maze);
-    }
-    
-    // Spawn de novos inimigos periodicamente
-    if (enemies.length < 5 && Math.random() < 0.005) {
-        spawnEnemies();
-    }
+    updateUI();
 }
 
 // ==================== RENDERIZAÇÃO ====================
@@ -571,10 +464,7 @@ function drawMaze() {
             const y = i * CELL_SIZE;
             
             if (maze[i][j] === 1) {
-                const gradient = ctx.createLinearGradient(x, y, x + CELL_SIZE, y + CELL_SIZE);
-                gradient.addColorStop(0, '#1a1a2e');
-                gradient.addColorStop(1, '#2a2a3e');
-                ctx.fillStyle = gradient;
+                ctx.fillStyle = '#1a1a2e';
                 ctx.fillRect(x, y, CELL_SIZE - 1, CELL_SIZE - 1);
                 ctx.fillStyle = '#00ffcc11';
                 ctx.fillRect(x + 2, y + 2, CELL_SIZE - 5, 2);
@@ -594,23 +484,26 @@ function drawItems() {
         const y = item.x * CELL_SIZE;
         
         if (item.type === 'coin') {
-            const pulse = Math.sin(Date.now() * 0.008) * 0.2 + 0.8;
             ctx.fillStyle = '#ffcc00';
             ctx.beginPath();
-            ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE * 0.25 * pulse, 0, Math.PI * 2);
+            ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE * 0.2, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#ffaa00';
-            ctx.font = `${CELL_SIZE * 0.4}px Arial`;
+            ctx.font = `${CELL_SIZE * 0.35}px Arial`;
             ctx.fillText('💰', x + CELL_SIZE * 0.3, y + CELL_SIZE * 0.7);
         } else if (item.type === 'key') {
             ctx.fillStyle = '#ff6600';
+            ctx.fillRect(x + CELL_SIZE * 0.3, y + CELL_SIZE * 0.4, CELL_SIZE * 0.4, CELL_SIZE * 0.15);
             ctx.beginPath();
-            ctx.rect(x + CELL_SIZE * 0.3, y + CELL_SIZE * 0.4, CELL_SIZE * 0.4, CELL_SIZE * 0.2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x + CELL_SIZE * 0.7, y + CELL_SIZE * 0.5, CELL_SIZE * 0.1, 0, Math.PI * 2);
+            ctx.arc(x + CELL_SIZE * 0.7, y + CELL_SIZE * 0.48, CELL_SIZE * 0.1, 0, Math.PI * 2);
             ctx.fill();
         }
+    }
+}
+
+function drawEnemies() {
+    for (let enemy of enemies) {
+        enemy.draw();
     }
 }
 
@@ -624,32 +517,32 @@ function drawPlayer() {
         ctx.globalAlpha = 0.5;
     }
     
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = '#00ffcc';
-    
     ctx.fillStyle = '#00ffcc';
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = '#00ffcc';
     ctx.beginPath();
-    ctx.ellipse(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE * 0.35, CELL_SIZE * 0.35, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE * 0.3, CELL_SIZE * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
     
     // Faixa de ninja
     ctx.fillStyle = '#ff3366';
     ctx.fillRect(x + CELL_SIZE * 0.2, y + CELL_SIZE * 0.3, CELL_SIZE * 0.6, 4);
     
+    // Olhos
     ctx.fillStyle = 'white';
     ctx.beginPath();
-    ctx.arc(x + CELL_SIZE * 0.35, y + CELL_SIZE * 0.35, 4, 0, Math.PI * 2);
+    ctx.arc(x + CELL_SIZE * 0.35, y + CELL_SIZE * 0.35, 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.35, 4, 0, Math.PI * 2);
+    ctx.arc(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.35, 3, 0, Math.PI * 2);
     ctx.fill();
     
-    ctx.fillStyle = '#1a1a2e';
+    ctx.fillStyle = '#0a0a1a';
     ctx.beginPath();
-    ctx.arc(x + CELL_SIZE * 0.35, y + CELL_SIZE * 0.33, 2, 0, Math.PI * 2);
+    ctx.arc(x + CELL_SIZE * 0.35, y + CELL_SIZE * 0.33, 1.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.33, 2, 0, Math.PI * 2);
+    ctx.arc(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.33, 1.5, 0, Math.PI * 2);
     ctx.fill();
     
     ctx.restore();
@@ -658,21 +551,20 @@ function drawPlayer() {
 function drawExit() {
     const x = exit.y * CELL_SIZE;
     const y = exit.x * CELL_SIZE;
-    const pulse = Math.sin(Date.now() * 0.005) * 0.2 + 0.8;
     
     if (keys > 0) {
         ctx.fillStyle = '#00ff44';
-        ctx.globalAlpha = 0.7;
+        ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE * 0.4 * pulse, 0, Math.PI * 2);
+        ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE * 0.35, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.fillStyle = 'white';
-        ctx.font = `${CELL_SIZE * 0.45}px Arial`;
+        ctx.font = `${CELL_SIZE * 0.4}px Arial`;
         ctx.fillText('🚪', x + CELL_SIZE * 0.3, y + CELL_SIZE * 0.7);
     } else {
         ctx.fillStyle = '#ff6600';
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = 0.4;
         ctx.beginPath();
         ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE * 0.3, 0, Math.PI * 2);
         ctx.fill();
@@ -683,16 +575,10 @@ function drawExit() {
     }
 }
 
-function drawEnemies() {
-    for (const enemy of enemies) {
-        enemy.draw();
-    }
-}
-
 function drawMinimap() {
     const minimapCanvas = document.getElementById('minimapCanvas');
     const minimapCtx = minimapCanvas.getContext('2d');
-    const size = 140;
+    const size = 100;
     const cellSize = size / MAZE_SIZE;
     
     minimapCanvas.width = size;
@@ -700,80 +586,43 @@ function drawMinimap() {
     
     for (let i = 0; i < MAZE_SIZE; i++) {
         for (let j = 0; j < MAZE_SIZE; j++) {
-            if (maze[i][j] === 1) {
-                minimapCtx.fillStyle = '#333';
-            } else {
-                minimapCtx.fillStyle = '#0a0a1a';
-            }
+            minimapCtx.fillStyle = maze[i][j] === 1 ? '#333' : '#0a0a1a';
             minimapCtx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
         }
     }
     
-    // Inimigos
-    for (const enemy of enemies) {
+    for (let enemy of enemies) {
         minimapCtx.fillStyle = '#ff3366';
         minimapCtx.fillRect(enemy.y * cellSize, enemy.x * cellSize, cellSize, cellSize);
     }
     
-    // Jogador
     minimapCtx.fillStyle = '#00ffcc';
     minimapCtx.fillRect(player.y * cellSize, player.x * cellSize, cellSize, cellSize);
     
-    // Saída
     minimapCtx.fillStyle = '#00ff44';
     minimapCtx.fillRect(exit.y * cellSize, exit.x * cellSize, cellSize, cellSize);
 }
 
-// ==================== UI E ESTADO ====================
-function formatTime(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
-function updateUI() {
-    document.getElementById('score').textContent = Math.floor(score);
-    document.getElementById('coinsValue').textContent = coins;
-    document.getElementById('keysValue').textContent = keys;
-    document.getElementById('distanceValue').textContent = Math.floor(distance);
-    document.getElementById('enemiesValue').textContent = enemies.length;
-    
-    if (score > highScore) {
-        highScore = score;
-        localStorage.setItem('mazeHighScore', highScore);
-        document.getElementById('highScoreValue').textContent = highScore;
-    }
-}
-
+// ==================== GAME OVER / VITÓRIA ====================
 function gameOver() {
-    gameRunning = false;
-    playGameOverSound();
     document.getElementById('overlayTitle').textContent = '💀 GAME OVER 💀';
-    document.getElementById('overlayMessage').textContent = 'Você foi capturado pelos perseguidores!';
     document.getElementById('finalTime').textContent = formatTime(timeSurvived);
     document.getElementById('finalCoins').textContent = coins;
     document.getElementById('finalKeys').textContent = keys;
     document.getElementById('finalDistance').textContent = Math.floor(distance);
-    document.getElementById('finalDefeated').textContent = enemiesDefeated;
     document.getElementById('gameOverlay').classList.remove('hidden');
 }
 
 function victory() {
-    gameRunning = false;
-    gameWin = true;
-    const finalScore = Math.floor(timeSurvived * 10) + coins * 5 + keys * 20;
-    if (finalScore > highScore) {
-        highScore = finalScore;
+    if (score > highScore) {
+        highScore = score;
         localStorage.setItem('mazeHighScore', highScore);
     }
-    playVictorySound();
     document.getElementById('overlayTitle').textContent = '🎉 VITÓRIA! 🎉';
-    document.getElementById('overlayMessage').textContent = 'Você escapou do labirinto vivo!';
     document.getElementById('finalTime').textContent = formatTime(timeSurvived);
     document.getElementById('finalCoins').textContent = coins;
     document.getElementById('finalKeys').textContent = keys;
     document.getElementById('finalDistance').textContent = Math.floor(distance);
-    document.getElementById('finalDefeated').textContent = enemiesDefeated;
     document.getElementById('gameOverlay').classList.remove('hidden');
 }
 
@@ -787,13 +636,11 @@ function restartGame() {
     keys = 0;
     distance = 0;
     timeSurvived = 0;
-    enemiesDefeated = 0;
     freezeTimer = 0;
     speedTimer = 0;
     revealTimer = 0;
-    stunTimer = 0;
     timeUntilChange = changeInterval;
-    playerSpeed = baseSpeed;
+    moveCooldown = 0;
     
     player = { x: 1, y: 1 };
     exit = { x: MAZE_SIZE - 2, y: MAZE_SIZE - 2 };
@@ -802,182 +649,28 @@ function restartGame() {
     generateItems();
     spawnEnemies();
     
-    document.getElementById('healthBarFill').style.width = '100%';
+    healthBarFill.style.width = '100%';
     document.getElementById('gameOverlay').classList.add('hidden');
     updateUI();
 }
 
-// ==================== SONS ====================
-let audioContext = null;
-
-function initAudio() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+// ==================== CONTROLES ====================
+function updateEnemies(deltaTime) {
+    for (let enemy of enemies) {
+        enemy.update(deltaTime, player, maze);
+    }
+    
+    if (enemies.length < 5 && Math.random() < 0.003) {
+        spawnEnemies();
     }
 }
 
-function playCoinSound() {
-    if (!audioContext) return;
-    try {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = 880;
-        gain.gain.value = 0.08;
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.1);
-        osc.stop(audioContext.currentTime + 0.1);
-    } catch(e) {}
-}
-
-function playKeySound() {
-    if (!audioContext) return;
-    try {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = 659;
-        gain.gain.value = 0.1;
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.15);
-        osc.stop(audioContext.currentTime + 0.15);
-    } catch(e) {}
-}
-
-function playHitSound() {
-    if (!audioContext) return;
-    try {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = 220;
-        gain.gain.value = 0.12;
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.2);
-        osc.stop(audioContext.currentTime + 0.2);
-    } catch(e) {}
-}
-
-function playAttackSound() {
-    if (!audioContext) return;
-    try {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = 440;
-        gain.gain.value = 0.1;
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.1);
-        osc.stop(audioContext.currentTime + 0.1);
-    } catch(e) {}
-}
-
-function playPowerUpSound() {
-    if (!audioContext) return;
-    try {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = 1046;
-        gain.gain.value = 0.1;
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.2);
-        osc.stop(audioContext.currentTime + 0.2);
-    } catch(e) {}
-}
-
-function playVictorySound() {
-    if (!audioContext) return;
-    try {
-        const notes = [523, 659, 784, 1046];
-        notes.forEach((freq, i) => {
-            setTimeout(() => {
-                const osc = audioContext.createOscillator();
-                const gain = audioContext.createGain();
-                osc.connect(gain);
-                gain.connect(audioContext.destination);
-                osc.frequency.value = freq;
-                gain.gain.value = 0.1;
-                osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.3);
-                osc.stop(audioContext.currentTime + 0.3);
-            }, i * 150);
-        });
-    } catch(e) {}
-}
-
-function playGameOverSound() {
-    if (!audioContext) return;
-    try {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.value = 150;
-        gain.gain.value = 0.15;
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.5);
-        osc.stop(audioContext.currentTime + 0.5);
-    } catch(e) {}
-}
-
-// ==================== CONTROLES ====================
-const keysPressed = {};
-
-document.addEventListener('keydown', (e) => {
-    const key = e.key;
-    keysPressed[key] = true;
-    e.preventDefault();
-    
-    let moved = false;
-    if (key === 'ArrowUp' || key === 'w' || key === 'W') moved = movePlayer(-1, 0);
-    if (key === 'ArrowDown' || key === 's' || key === 'S') moved = movePlayer(1, 0);
-    if (key === 'ArrowLeft' || key === 'a' || key === 'A') moved = movePlayer(0, -1);
-    if (key === 'ArrowRight' || key === 'd' || key === 'D') moved = movePlayer(0, 1);
-    if (key === ' ' || key === 'x' || key === 'X') attackEnemies();
-});
-
-// Mobile Controls
-const btnUp = document.getElementById('btnUp');
-const btnDown = document.getElementById('btnDown');
-const btnLeft = document.getElementById('btnLeft');
-const btnRight = document.getElementById('btnRight');
-
-if (btnUp) {
-    btnUp.addEventListener('click', () => movePlayer(-1, 0));
-    btnDown.addEventListener('click', () => movePlayer(1, 0));
-    btnLeft.addEventListener('click', () => movePlayer(0, -1));
-    btnRight.addEventListener('click', () => movePlayer(0, 1));
-}
-
-if ('ontouchstart' in window) {
-    document.getElementById('mobileControls').classList.remove('hidden');
-}
-
-// Power-up buttons
-document.getElementById('powerupReveal').addEventListener('click', useRevealMap);
-document.getElementById('powerupFreeze').addEventListener('click', useFreezeMaze);
-document.getElementById('powerupSpeed').addEventListener('click', useSpeedBoost);
-document.getElementById('powerupStun').addEventListener('click', useStunEnemies);
-document.getElementById('restartButton').addEventListener('click', () => {
-    initAudio();
-    restartGame();
-});
-
 // ==================== LOOP PRINCIPAL ====================
 let lastTimestamp = 0;
-let lastFrameTime = 0;
-const targetFPS = 60;
-const frameDelay = 1000 / targetFPS;
 
 function gameLoop(timestamp) {
     let deltaTime = Math.min(0.033, (timestamp - lastTimestamp) / 1000);
-    if (deltaTime > 0.1) deltaTime = 0.016;
+    if (deltaTime < 0.01) deltaTime = 0.016;
     
     if (gameRunning && !gameWin) {
         updateTimers(deltaTime);
@@ -1006,19 +699,48 @@ function init() {
     maze = generateMaze();
     generateItems();
     spawnEnemies();
+    
+    // Inicializar áudio
+    canvas.addEventListener('click', () => {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    });
+    
+    // Controles de teclado
+    document.addEventListener('keydown', (e) => {
+        const key = e.key;
+        
+        if (key === 'ArrowUp' || key === 'w' || key === 'W') movePlayer(-1, 0);
+        if (key === 'ArrowDown' || key === 's' || key === 'S') movePlayer(1, 0);
+        if (key === 'ArrowLeft' || key === 'a' || key === 'A') movePlayer(0, -1);
+        if (key === 'ArrowRight' || key === 'd' || key === 'D') movePlayer(0, 1);
+        if (key === 'x' || key === 'X' || key === ' ') attackEnemies();
+        e.preventDefault();
+    });
+    
+    // Controles mobile
+    document.getElementById('btnUp').addEventListener('click', () => movePlayer(-1, 0));
+    document.getElementById('btnDown').addEventListener('click', () => movePlayer(1, 0));
+    document.getElementById('btnLeft').addEventListener('click', () => movePlayer(0, -1));
+    document.getElementById('btnRight').addEventListener('click', () => movePlayer(0, 1));
+    
+    // Power-ups
+    document.getElementById('powerupReveal').addEventListener('click', useRevealMap);
+    document.getElementById('powerupFreeze').addEventListener('click', useFreezeMaze);
+    document.getElementById('powerupSpeed').addEventListener('click', useSpeedBoost);
+    document.getElementById('powerupStun').addEventListener('click', useStunEnemies);
+    document.getElementById('restartButton').addEventListener('click', restartGame);
+    
+    // Mostrar controles mobile em dispositivos touch
+    if ('ontouchstart' in window) {
+        document.getElementById('mobileControls').style.display = 'flex';
+    }
+    
+    updateUI();
     gameLoop(0);
+    
+    console.log("Jogo iniciado! Use WASD ou setas para mover. Posição inicial:", player);
 }
 
-canvas.addEventListener('click', () => {
-    initAudio();
-});
-
 init();
-
-// Prevenir scroll
-window.addEventListener('keydown', (e) => {
-    const keys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'W', 's', 'S', 'a', 'A', 'd', 'D', 'x', 'X'];
-    if (keys.includes(e.key)) {
-        e.preventDefault();
-    }
-});
